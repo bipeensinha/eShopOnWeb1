@@ -1,26 +1,55 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.DependencyInjection;
+using PublicApi;
+using Infrastructure.Data; // for CatalogContext
+using Infrastructure;       // for SeedData
 using System.Net.Http;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PublicApiIntegrationTests;
 
 [TestClass]
 public class ProgramTest
 {
-    private static WebApplicationFactory<Program> _application = new();
+    private static WebApplicationFactory<Program> _application = null!;
 
-    public static HttpClient NewClient
-    {
-        get
-        {
-            return _application.CreateClient();
-        }
-    }
+    public static HttpClient NewClient => _application.CreateClient();
 
     [AssemblyInitialize]
-    public static void AssemblyInitialize(TestContext _)
+    public static async Task AssemblyInitialize(TestContext _)
     {
-        _application = new WebApplicationFactory<Program>();
+        _application = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    using var scope = services.BuildServiceProvider().CreateScope();
+                    var scopedServices = scope.ServiceProvider;
 
+                    try
+                    {
+                        var db = scopedServices.GetRequiredService<CatalogContext>();
+
+                        // Ensure DB is created and seeded before tests run
+                        db.Database.EnsureCreated();
+                        if (!db.CatalogBrands.Any())
+                        {
+                            SeedData.PopulateTestData(db);
+                            db.SaveChanges();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ERROR] DB initialization failed: {ex.Message}");
+                        throw;
+                    }
+                });
+            });
+
+        // Allow async init
+        await Task.CompletedTask;
     }
 }
