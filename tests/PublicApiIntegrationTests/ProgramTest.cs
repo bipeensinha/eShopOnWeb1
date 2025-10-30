@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.eShopWeb.PublicApi;
 using Microsoft.eShopWeb.Infrastructure;
 using Microsoft.eShopWeb.Infrastructure.Data;
@@ -32,18 +33,16 @@ public class ProgramTest
                     try
                     {
                         var db = scopedServices.GetRequiredService<CatalogContext>();
+                        var logger = scopedServices.GetRequiredService<ILogger<CatalogContextSeed>>();
 
-                        // Ensure DB is created and seeded
                         db.Database.EnsureCreated();
-                        if (!db.CatalogBrands.Any())
-                        {
-                            CatalogContextSeed.Seed(db); // ✅ Corrected line
-                            db.SaveChanges();
-                        }
+
+                        // ✅ Seed the database asynchronously
+                        Task.Run(async () => await CatalogContextSeed.SeedAsync(db, logger)).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[ERROR] DB initialization failed: {ex.Message}");
+                        Console.WriteLine($"[ERROR] Database initialization failed: {ex.Message}");
                         throw;
                     }
                 });
