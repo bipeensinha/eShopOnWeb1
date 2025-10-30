@@ -1,4 +1,3 @@
-using Microsoft.eShopWeb.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +37,7 @@ public class ProgramTest
                         db.Database.EnsureCreated();
                         if (!db.CatalogBrands.Any())
                         {
-                            SeedData.PopulateTestData(db);
+                            CatalogContextSeed.Seed(db); // ✅ Corrected line
                             db.SaveChanges();
                         }
                     }
