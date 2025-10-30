@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
-using PublicApi;
-using Infrastructure.Data; // for CatalogContext
-using Infrastructure;       // for SeedData
+using Microsoft.eShopWeb.PublicApi;
+using Microsoft.eShopWeb.Infrastructure;
+using Microsoft.eShopWeb.Infrastructure.Data;
 using System.Net.Http;
 using System;
 using System.Linq;
@@ -33,7 +33,7 @@ public class ProgramTest
                     {
                         var db = scopedServices.GetRequiredService<CatalogContext>();
 
-                        // Ensure DB is created and seeded before tests run
+                        // Ensure DB is created and seeded
                         db.Database.EnsureCreated();
                         if (!db.CatalogBrands.Any())
                         {
@@ -49,7 +49,6 @@ public class ProgramTest
                 });
             });
 
-        // Allow async init
         await Task.CompletedTask;
     }
 }
