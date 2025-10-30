@@ -14,95 +14,98 @@ jobs:
   buildandtest:
     runs-on: ubuntu-latest
     steps:
-    # 1️⃣ Checkout code
-    - uses: actions/checkout@v4
+      # 1️⃣ Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # 2️⃣ Setup .NET 8 SDK (Stable channel)
-    # Remove preview because it was pulling 9.0 RC SDK.
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-        cache: false
+      # 2️⃣ Setup .NET 9 SDK (Stable channel)
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+          cache: false  # set true after you add lock files
 
-    # 3️⃣ Ensure clean environment (prevents old cache conflict)
-    - name: Clean solution
-      run: dotnet clean ./eShopOnWeb.sln
+      # 3️⃣ Clean previous builds
+      - name: Clean solution
+        run: dotnet clean ./eShopOnWeb.sln
 
-    # 4️⃣ Restore dependencies with locked SDK (no upgrade to 9.0)
-    - name: Restore dependencies
-      run: dotnet restore ./eShopOnWeb.sln --force-evaluate
+      # 4️⃣ Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore ./eShopOnWeb.sln --force-evaluate
 
-    # 5️⃣ Build project
-    - name: Build with dotnet
-      run: dotnet build ./eShopOnWeb.sln --configuration Release --no-restore
+      # 5️⃣ Build solution
+      - name: Build with dotnet
+        run: dotnet build ./eShopOnWeb.sln --configuration Release --no-restore
 
-    # 6️⃣ Run tests
-    - name: Test with dotnet
-      run: dotnet test ./eShopOnWeb.sln --configuration Release --no-build --verbosity normal
+      # 6️⃣ Run tests (now with .NET 9 assemblies)
+      - name: Test with dotnet
+        run: dotnet test ./eShopOnWeb.sln --configuration Release --no-build --verbosity normal
 
-    # 7️⃣ Publish output
-    - name: dotnet publish
-      run: |
-        dotnet publish ./src/Web/Web.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
-        cd ${{env.DOTNET_ROOT}}/myapp
-        zip -r ../app.zip .
+      # 7️⃣ Publish output for deployment
+      - name: dotnet publish
+        run: |
+          dotnet publish ./src/Web/Web.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+          cd ${{env.DOTNET_ROOT}}/myapp
+          zip -r ../app.zip .
 
-    # 8️⃣ Upload app artifact
-    - name: Upload artifact for deployment job
-      uses: actions/upload-artifact@v4
-      with:
-        name: .net-app
-        path: ${{env.DOTNET_ROOT}}/app.zip
-        
-    # 9️⃣ Upload Bicep template
-    - name: Upload artifact for deployment job
-      uses: actions/upload-artifact@v4
-      with:
-        name: bicep-template
-        path: ${{ env.TEMPLATE-FILE }}
+      # 8️⃣ Upload web app artifact
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/app.zip
+
+      # 9️⃣ Upload Bicep template
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: bicep-template
+          path: ${{ env.TEMPLATE-FILE }}
 
   deploy:
     runs-on: ubuntu-latest
     needs: buildandtest
     environment:
       name: 'Development'
+
     steps:
-    - name: Download app artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: .net-app
-        path: .net-app
+      # 🔽 Download app artifact
+      - name: Download app artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+          path: .net-app
 
-    - name: Download Bicep artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: bicep-template
-        path: bicep-template
+      # 🔽 Download Bicep template
+      - name: Download Bicep template
+        uses: actions/download-artifact@v4
+        with:
+          name: bicep-template
+          path: bicep-template
 
-    # 🔐 Azure Login
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    # ☁️ Deploy infrastructure with Bicep
-    - name: Deploy infrastructure
-      uses: azure/arm-deploy@v2
-      with:
-        subscriptionId: ${{ env.SUBSCRIPTION-ID }}
-        resourceGroupName: ${{ env.RESOURCE-GROUP }}
-        template: bicep-template/webapp.bicep
-        parameters: 'webAppName=${{ env.WEBAPP-NAME }} location=${{ env.LOCATION }}'
-        failOnStdErr: false   
+      # 🔐 Azure Login
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # 🚀 Publish to Azure WebApp
-    - name: Publish Website to WebApp
-      uses: azure/cli@v2
-      with:
-        inlineScript: |
-          az webapp deploy \
-            --name ${{ env.WEBAPP-NAME }} \
-            --resource-group ${{ env.RESOURCE-GROUP }} \
-            --src-path .net-app/app.zip \
-            --type zip
+      # ☁️ Deploy Infrastructure using Bicep
+      - name: Deploy infrastructure
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ env.SUBSCRIPTION-ID }}
+          resourceGroupName: ${{ env.RESOURCE-GROUP }}
+          template: bicep-template/webapp.bicep
+          parameters: 'webAppName=${{ env.WEBAPP-NAME }} location=${{ env.LOCATION }}'
+          failOnStdErr: false
+
+      # 🚀 Deploy Website using Azure CLI (ZIP deploy)
+      - name: Publish Website to WebApp
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp deploy \
+              --name ${{ env.WEBAPP-NAME }} \
+              --resource-group ${{ env.RESOURCE-GROUP }} \
+              --src-path .net-app/app.zip \
+              --type zip
