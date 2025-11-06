@@ -5,7 +5,7 @@ on:
 
 env:
   RESOURCE-GROUP: rg-eshoponweb-eastus2
-  LOCATION: eastus2
+  LOCATION: westus2
   TEMPLATE-FILE: infra/webapp.bicep
   SUBSCRIPTION-ID: "7523f196-78dd-4b4a-a22a-ce149ab0aae1"
   WEBAPP-NAME: devops-webapp-eastus2-56314908
