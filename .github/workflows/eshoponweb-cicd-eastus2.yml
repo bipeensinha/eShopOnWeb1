@@ -1,4 +1,4 @@
-name: eShopOnWeb Build and Test
+name: eShopOnWeb-eastus2 Build and Test
 
 on:
   workflow_dispatch:
