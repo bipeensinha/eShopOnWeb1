@@ -99,13 +99,21 @@ jobs:
           parameters: 'webAppName=${{ env.WEBAPP-NAME }} location=${{ env.LOCATION }}'
           failOnStdErr: false
 
-      # 🚀 Deploy Website using Azure CLI (ZIP deploy)
+        # 🚀 Deploy Website using Azure CLI (ZIP deploy)
       - name: Publish Website to WebApp
         uses: azure/cli@v2
         with:
           inlineScript: |
+            echo "🔧 Setting runtime stack to .NET 9 (Linux)..."
+            az webapp config set \
+              --resource-group ${{ env.RESOURCE-GROUP }} \
+              --name ${{ env.WEBAPP-NAME }} \
+              --linux-fx-version "DOTNETCORE|9.0"
+    
+            echo "🚀 Deploying app to Azure WebApp..."
             az webapp deploy \
               --name ${{ env.WEBAPP-NAME }} \
               --resource-group ${{ env.RESOURCE-GROUP }} \
               --src-path .net-app/app.zip \
               --type zip
+
