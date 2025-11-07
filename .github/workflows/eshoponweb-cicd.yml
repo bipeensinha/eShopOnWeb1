@@ -7,8 +7,8 @@ env:
   RESOURCE-GROUP: rg-eshoponweb-westeurope
   LOCATION: westeurope
   TEMPLATE-FILE: infra/webapp.bicep
-  SUBSCRIPTION-ID: "7523f196-78dd-4b4a-a22a-ce149ab0aae1"
-  WEBAPP-NAME: devops-webapp-westeurope-56314908
+  SUBSCRIPTION-ID: "MOC Subscription-lod51441960"
+  WEBAPP-NAME: devops-webapp-westeurope-56351341
 
 jobs:
   buildandtest:
